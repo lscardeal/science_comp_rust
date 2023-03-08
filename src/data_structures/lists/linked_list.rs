@@ -94,7 +94,6 @@ impl<'a, T> LinkedList<'a, T> {
 
         let mut previous: &mut LinkedNode<T> = unsafe { self.head.unwrap().as_mut() };
         let mut current: &mut LinkedNode<T> = unsafe { previous.next().unwrap().as_mut() };
-        
         while (current.has_next()) {
             previous = current;
             current = unsafe { previous.next().unwrap().as_mut() };
