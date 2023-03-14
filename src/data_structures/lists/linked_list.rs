@@ -1,74 +1,108 @@
-use crate::data_structures::nodes::linked_node::LinkedNode;
+use std::{marker::PhantomData, ptr::NonNull};
 
-pub struct LinkedList<'a, T: 'static> {
-    head: Option<Box<LinkedNode<T>>>,
-    tail: Option<&'a Box<LinkedNode<T>>>,
-    size: usize
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct LinkedNode<T>{
+    value: T,
+    next: Option<NonNull<LinkedNode<T>>>
 }
 
-impl<'a, T> LinkedList<'a, T> {
+impl<T> LinkedNode<T> {
+    pub fn new(value: T) -> Self {
+        Self {
+            value, 
+            next: None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct LinkedList<T> {
+    head: Option<NonNull<LinkedNode<T>>>,
+    tail: Option<NonNull<LinkedNode<T>>>,
+    length: usize,
+    marker: PhantomData<Box<LinkedNode<T>>>
+}
+
+#[allow(dead_code)]
+impl<T> LinkedList<T> {
 
     pub fn new() -> Self {
         Self {
             head: None,
             tail: None,
-            size: 0
+            length: 0,
+            marker: PhantomData
         }
     }
 
     pub fn clear(&mut self) {
         self.head = None;
         self.tail = None;
-        self.size = 0;
+        self.length = 0;
+    }
+
+    pub fn length(&self) -> usize {
+        self.length
     }
 
     pub fn is_empty(&self) -> bool {
-        self.size == 0
+        self.length == 0
     }
 
     fn has_one_node(&self) -> bool {
-        self.size == 1
+        self.length == 1
     }
 
     pub fn add_first(&mut self, value: T) {
-        let mut node: LinkedNode<T> = self.create_node(value);
-        node.set_next(self.head.take());
-        self.head = Some(Box::from(node));
+        let mut node = Box::new(LinkedNode::new(value));
+        node.next = self.head.take();
+        self.head = NonNull::new(Box::into_raw(node));
+        self.length += 1;
 
         if self.tail.is_none() {
-            self.tail = self.head.as_ref();
+            self.tail = self.head;
         }
-
-        self.size += 1;
     }
 
     pub fn add_last(&mut self, value: T) {
-        let node: Option<Box<LinkedNode<T>>> = self.create_assignable_node(value);
-        
-        if self.is_empty() {
-            self.head = node;
-            self.tail = self.head.as_ref()
-        } else {
-            let tail = &(self.tail.take()).unwrap();
-            let tail = tail.as_mut();
-            
-            tail.set_next(node);
-            self.tail = tail.next().as_ref();
+        let node = Box::new(LinkedNode::new(value));
+        let node_ptr = NonNull::new(Box::into_raw(node));
+
+        if let Some(mut tail) = self.tail {
+            let mut tail = unsafe { tail.as_mut() };
+            tail.next = node_ptr;
         }
-        
-        self.size += 1;
+        self.tail = node_ptr;
+
+        if self.head.is_none() {
+            self.head = self.tail;
+        }
     }
 
-    pub fn get_first(&self) -> Option<&Box<LinkedNode<T>>> {
-        self.head.as_ref()
+    pub fn get_first(&self) -> Option<NonNull<LinkedNode<T>>> {
+        self.head
     }
 
-    pub fn get_last(&self) -> Option<&Box<LinkedNode<T>>> {
+    pub fn get_last(&self) -> Option<NonNull<LinkedNode<T>>> {
         self.tail
     }
 
-    // public T get(int index) throws IndexOutOfBoundsException {
+    pub fn get(&mut self, index: usize) -> Option<&'static T> {
+        self.get_helper(self.head, index)
+    }
 
+    fn get_helper(&mut self, node: Option<NonNull<LinkedNode<T>>>, index: usize) -> Option<&'static T>  {
+        match node {
+            None => None,
+            Some(next_ptr) => match index {
+                0 => Some(unsafe { &(*next_ptr.as_ptr()).value }),
+                _ => self.get_helper( unsafe {(*next_ptr.as_ptr()).next }, index - 1)
+            } 
+        }
+    }
+
+    /*
     // public void add(int index, T value) throws IndexOutOfBoundsException {
 
     pub fn remove_first(&mut self) {
@@ -111,15 +145,6 @@ impl<'a, T> LinkedList<'a, T> {
 
     // public void remove(T value) {
 
-    pub fn create_node(&self, value: T) -> LinkedNode<T> {
-        LinkedNode::new(value)
-    }
-
-    fn create_assignable_node(&self, value: T) -> Option<Box<LinkedNode<T>>> {
-        let node = self.create_node(value);
-        Some(Box::from(node))
-    }
-
-    // private void checkIndex(int index) throws IndexOutOfBoundsException {
+    // private void checkIndex(int index) throws IndexOutOfBoundsException {*/
 
 }
